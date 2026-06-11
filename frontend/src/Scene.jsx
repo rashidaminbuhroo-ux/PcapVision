@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
-export function Scene({ packets }) {
+export function Scene({ packets, onHoverVehicle, onSelectVehicle, selectedVehicleId }) {
   const vehicleRefs = useRef([]);
   const lanePositions = [-6, -2, 2, 6]; 
 
@@ -33,6 +33,10 @@ export function Scene({ packets }) {
 
       return {
         id: packet.id || index,
+        src: packet.src || "0.0.0.0",
+        dst: packet.dst || "0.0.0.0",
+        protocol: packet.protocol,
+        size: packet.size,
         x: lanePositions[laneIndex],
         z: index * 4, 
         color,
@@ -85,25 +89,48 @@ export function Scene({ packets }) {
       </mesh>
 
       {/* GENERATE STYLIZED VEHICLES */}
-      {processedVehicles.map((v, idx) => (
-        <group 
-          key={v.id} 
-          ref={(el) => (vehicleRefs.current[idx] = el)} 
-          position={[v.x, v.dimensions[1]/2, v.z]}
-          userData={{ speed: v.speed }}
-        >
-          <mesh castShadow>
-            <boxGeometry args={v.dimensions} />
-            <meshStandardMaterial color={v.color} roughness={0.3} metalness={0.8} />
-          </mesh>
-          <mesh position={[0, 0.1, -v.dimensions[2]/2 - 0.02]}>
-            <boxGeometry args={[v.dimensions[0] * 0.7, 0.1, 0.05]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-        </group>
-      ))}
+      {processedVehicles.map((v, idx) => {
+        const isSelected = selectedVehicleId === v.id;
+        return (
+          <group 
+            key={v.id} 
+            ref={(el) => (vehicleRefs.current[idx] = el)} 
+            position={[v.x, v.dimensions[1]/2, v.z]}
+            userData={{ speed: v.speed }}
+          >
+            <mesh 
+              castShadow 
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'pointer';
+                onHoverVehicle(v);
+              }}
+              onPointerOut={(e) => {
+                document.body.style.cursor = 'default';
+                onHoverVehicle(null);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVehicle(v);
+              }}
+            >
+              <boxGeometry args={v.dimensions} />
+              <meshStandardMaterial 
+                color={isSelected ? '#f43f5e' : v.color} 
+                roughness={0.3} 
+                metalness={0.8}
+                emissive={isSelected ? '#f43f5e' : '#000000'}
+                emissiveIntensity={isSelected ? 0.5 : 0}
+              />
+            </mesh>
+            <mesh position={[0, 0.1, -v.dimensions[2]/2 - 0.02]}>
+              <boxGeometry args={[v.dimensions[0] * 0.7, 0.1, 0.05]} />
+              <meshBasicMaterial color="#ffffff" />
+            </mesh>
+          </group>
+        );
+      })}
 
-      {/* COMPOSER ENGINE BLOOM */}
       <EffectComposer>
         <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} />
       </EffectComposer>
