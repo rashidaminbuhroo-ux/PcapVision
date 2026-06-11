@@ -43,8 +43,7 @@ export function Scene({ packets, isPaused, playbackResetCounter, onHoverVehicle,
         id: packet.id || index,
         src: packet.src || "UNKNOWN_SRC",
         dst: packet.dst || "UNKNOWN_DST",
-        src_mac: packet.src_mac || "00:00:00:00:00:00",
-        dst_mac: packet.dst_mac || "00:00:00:00:00:00",
+        ip_id: packet.ip_id || 0,
         protocol: packet.protocol,
         size: packet.size || 64,
         x: lanePositions[laneIndex],
@@ -52,7 +51,7 @@ export function Scene({ packets, isPaused, playbackResetCounter, onHoverVehicle,
         color,
         dimensions,
         direction,
-        speed: packet.speed || 6
+        speed: (packet.speed || 6) * 1.2 
       };
     });
   }, [packets, playbackResetCounter]);
@@ -62,7 +61,7 @@ export function Scene({ packets, isPaused, playbackResetCounter, onHoverVehicle,
       id: i,
       x: (i * 1.5) - 8.25,
       zOffset: Math.random() * 50,
-      speed: Math.random() * 10 + 5
+      speed: Math.random() * 15 + 8
     }));
   }, []);
 
@@ -197,18 +196,23 @@ export function Scene({ packets, isPaused, playbackResetCounter, onHoverVehicle,
               <meshBasicMaterial color="#ffffff" />
             </mesh>
 
-            <Html distanceFactor={14} position={[0, v.dimensions[1] + 0.2, 0]}>
+            <Html distanceFactor={14} position={[0, v.dimensions[1] + 0.3, 0]}>
               <div style={{
-                backgroundColor: 'rgba(13, 17, 23, 0.9)',
+                backgroundColor: 'rgba(13, 17, 23, 0.95)',
                 border: isSelected ? '1px solid #f43f5e' : `1px solid ${v.color}`,
-                padding: '3px 8px',
+                padding: '6px 10px',
                 borderRadius: '4px',
                 fontSize: '10px',
                 color: '#fff',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                fontFamily: 'monospace',
+                textAlign: 'center'
               }}>
-                {v.protocol}
+                <div style={{ color: v.color, fontWeight: 'bold', marginBottom: '4px' }}>{v.protocol}</div>
+                <div style={{ color: '#94a3b8', fontSize: '9px' }}>{v.src}</div>
+                <div style={{ color: '#64748b', fontSize: '8px', margin: '1px 0' }}>⬇</div>
+                <div style={{ color: '#38bdf8', fontSize: '9px' }}>{v.dst}</div>
               </div>
             </Html>
           </group>
