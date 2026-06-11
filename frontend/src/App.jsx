@@ -6,6 +6,8 @@ import { Scene } from './Scene';
 function App() {
   const [packets, setPackets] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hoveredVehicle, setHoveredVehicle] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   const metrics = useMemo(() => {
     if (packets.length === 0) return { dns: 0, https: 0, http: 0, totalBytes: 0 };
@@ -26,6 +28,7 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
     setLoading(true);
+    setSelectedVehicle(null);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -99,9 +102,50 @@ function App() {
         </div>
       </div>
 
+      {/* RIGHT-SIDE PACKET DIAGNOSTIC DISPLAY */}
+      {selectedVehicle && (
+        <div style={{ position: 'absolute', top: 80, right: 20, width: '320px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '14px', padding: '20px', borderRadius: '12px', border: '1px solid #f43f5e', backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(12px)', boxShadow: '0 20px 40px rgba(244,63,94,0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: '#f43f5e', fontWeight: 'bold' }}>📡 PACKET TELEMETRY ANALYSIS</span>
+            <button onClick={() => setSelectedVehicle(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>SOURCE ADDRESS</div>
+            <div style={{ fontSize: '14px', color: '#f8fafc', fontWeight: 'bold' }}>{selectedVehicle.src}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>DESTINATION TARGET</div>
+            <div style={{ fontSize: '14px', color: '#38bdf8', fontWeight: 'bold' }}>{selectedVehicle.dst}</div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+            <div>
+              <div style={{ fontSize: '10px', color: '#64748b' }}>PROTOCOL</div>
+              <div style={{ fontSize: '13px', color: selectedVehicle.color, fontWeight: 'bold' }}>{selectedVehicle.protocol}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: '#64748b' }}>PAYLOAD SIZE</div>
+              <div style={{ fontSize: '13px', color: '#4ade80', fontWeight: 'bold' }}>{selectedVehicle.size} Bytes</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING HOVER TOOLTIP INTERFACE */}
+      {hoveredVehicle && (
+        <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 10, padding: '8px 16px', backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #3b82f6', borderRadius: '6px', pointerEvents: 'none', textAlign: 'center', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#38bdf8' }}>{hoveredVehicle.src} ➡️ {hoveredVehicle.dst}</div>
+          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>CLICK VEHICLE FOR SYSTEM PROFILE</div>
+        </div>
+      )}
+
       <Canvas shadows>
         <PerspectiveCamera makeDefault position={[0, 4, 18]} fov={60} />
-        <Scene packets={packets} />
+        <Scene 
+          packets={packets} 
+          onHoverVehicle={setHoveredVehicle} 
+          onSelectVehicle={setSelectedVehicle}
+          selectedVehicleId={selectedVehicle ? selectedVehicle.id : null}
+        />
         <OrbitControls maxPolarAngle={Math.PI / 2.1} minDistance={5} maxDistance={40} />
       </Canvas>
       
