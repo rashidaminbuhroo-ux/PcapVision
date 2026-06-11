@@ -1,67 +1,112 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
 export function Scene({ packets }) {
   const vehicleRefs = useRef([]);
+  const lanePositions = [-6, -2, 2, 6]; 
 
-  // 1. Assign lanes and colors based on Protocols
-  const getVehicleSettings = (protocol, size) => {
-    switch(protocol) {
-      case 'DNS': 
-        return { laneX: -4, color: '#eab308', scale: [0.4, 0.4, 0.8] }; // Small, fast yellow motorcycles
-      case 'HTTPS': 
-        return { laneX: 0, color: '#10b981', scale: [1, 1, 2.5] };     // Big green trucks (Heavy payload)
-      case 'HTTP': 
-        return { laneX: 4, color: '#f97316', scale: [0.8, 0.6, 1.5] };  // Orange sedans
-      default: 
-        return { laneX: 2, color: '#6366f1', scale: [0.7, 0.6, 1.2] };  // Blue cars for generic TCP
-    }
-  };
+  const processedVehicles = useMemo(() => {
+    return packets.map((packet, index) => {
+      let laneIndex = 0;
+      let color = '#06b6d4'; 
+      let dimensions = [0.8, 0.6, 1.6]; 
 
-  // 2. Animate vehicles moving down the highway lanes
+      if (packet.protocol === 'DNS') {
+        laneIndex = 0;
+        color = '#fbbf24'; 
+        dimensions = [0.4, 0.4, 0.9]; 
+      } else if (packet.protocol === 'HTTPS') {
+        laneIndex = 1;
+        color = '#10b981'; 
+        dimensions = [1.2, 1.1, 3.2]; 
+      } else if (packet.protocol === 'HTTP') {
+        laneIndex = 2;
+        color = '#f97316'; 
+        dimensions = [0.9, 0.7, 2.0]; 
+      } else {
+        laneIndex = 3;
+        color = '#8b5cf6'; 
+        dimensions = [0.8, 0.6, 1.6]; 
+      }
+
+      return {
+        id: packet.id || index,
+        x: lanePositions[laneIndex],
+        z: index * 4, 
+        color,
+        dimensions,
+        speed: Math.max(3, (packet.size / 200) + 2) 
+      };
+    });
+  }, [packets]);
+
   useFrame((state, delta) => {
     vehicleRefs.current.forEach((vehicle) => {
-      if (vehicle) {
-        // Move forward along Z axis toward the gateway
-        vehicle.position.z -= delta * (vehicle.userData.speed || 5);
-        
-        # Reset position if they drive off into the horizon (infinite traffic loop)
-        if (vehicle.position.z < -50) {
-          vehicle.position.z = 20; 
-        }
+      if (!vehicle) return;
+      vehicle.position.z -= delta * vehicle.userData.speed;
+      if (vehicle.position.z < -60) {
+        vehicle.position.z = 40;
       }
     });
   });
 
   return (
     <group>
-      {/* Ambient and spotlighting to create that cool cyber look */}
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[10, 20, 10]} intensity={1.5} />
+      <color attach="background" args={['#020617']} />
+      <ambientLight intensity={0.15} />
+      <directionalLight position={[5, 25, 5]} intensity={0.4} />
 
-      {/* THE HIGHWAY ROAD */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, -15]}>
-        <planeGeometry args={[16, 100]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.8} />
+      {/* ROAD SURFACE */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, -10]}>
+        <planeGeometry args={[18, 150]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.7} metalness={0.2} />
       </mesh>
 
-      {/* THE 3D VEHICLES (GENERATED FROM PCAP PACKETS) */}
-      {packets.map((packet, idx) => {
-        const config = getVehicleSettings(packet.protocol, packet.size);
-        
-        return (
-          <mesh 
-            key={packet.id || idx}
-            ref={(el) => (vehicleRefs.current[idx] = el)}
-            position={[config.laneX, 0.3, idx * 3]} // Space them out on start
-            userData={{ speed: packet.speed || 4 }}
-          >
-            <boxGeometry args={config.scale} />
-            <meshStandardMaterial color={config.color} metalness={0.5} roughness={0.2} />
+      {/* NEON SIDEWALKS */}
+      <mesh position={[-9.1, 0.05, -10]}>
+        <boxGeometry args={[0.1, 0.1, 150]} />
+        <meshBasicMaterial color="#ec4899" /> 
+      </mesh>
+      <mesh position={[9.1, 0.05, -10]}>
+        <boxGeometry args={[0.1, 0.1, 150]} />
+        <meshBasicMaterial color="#ec4899" />
+      </mesh>
+
+      {/* INTERNET GATEWAY ARC */}
+      <mesh position={[0, 4, -50]}>
+        <boxGeometry args={[20, 0.5, 1]} />
+        <meshStandardMaterial color="#1e1b4b" />
+      </mesh>
+      <mesh position={[0, 4.3, -50]}>
+        <boxGeometry args={[18, 0.1, 1.1]} />
+        <meshBasicMaterial color="#a855f7" /> 
+      </mesh>
+
+      {/* GENERATE STYLIZED VEHICLES */}
+      {processedVehicles.map((v, idx) => (
+        <group 
+          key={v.id} 
+          ref={(el) => (vehicleRefs.current[idx] = el)} 
+          position={[v.x, v.dimensions[1]/2, v.z]}
+          userData={{ speed: v.speed }}
+        >
+          <mesh castShadow>
+            <boxGeometry args={v.dimensions} />
+            <meshStandardMaterial color={v.color} roughness={0.3} metalness={0.8} />
           </mesh>
-        );
-      })}
+          <mesh position={[0, 0.1, -v.dimensions[2]/2 - 0.02]}>
+            <boxGeometry args={[v.dimensions[0] * 0.7, 0.1, 0.05]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+        </group>
+      ))}
+
+      {/* COMPOSER ENGINE BLOOM */}
+      <EffectComposer>
+        <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} />
+      </EffectComposer>
     </group>
   );
 }
