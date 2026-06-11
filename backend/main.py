@@ -7,7 +7,6 @@ from scapy.all import rdpcap, IP, TCP, UDP
 
 app = FastAPI(title="PcapVision API")
 
-# Allow the React frontend to talk to this API safely
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,7 +17,6 @@ app.add_middleware(
 
 @app.post("/api/upload")
 async def upload_pcap(file: UploadFile = File(...)):
-    # Create a clean temporary workspace for the file structure
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pcap")
     try:
         content = await file.read()
@@ -30,10 +28,8 @@ async def upload_pcap(file: UploadFile = File(...)):
 
         for i, pkt in enumerate(packets):
             if IP in pkt:
-                # Default protocol fallbacks
                 protocol_str = "TCP" if TCP in pkt else "UDP" if UDP in pkt else "IP"
                 
-                # Check layer configurations and ports to isolate protocol types
                 if TCP in pkt:
                     sport = pkt[TCP].sport
                     dport = pkt[TCP].dport
@@ -46,25 +42,23 @@ async def upload_pcap(file: UploadFile = File(...)):
                     if pkt[UDP].sport == 53 or pkt[UDP].dport == 53:
                         protocol_str = "DNS"
 
-                # Core data matrix generation for the 3D highway tracks
                 packets_data.append({
                     "id": i,
                     "src": pkt[IP].src,
                     "dst": pkt[IP].dst,
-                    "size": len(pkt), # Byte size directly translates to vehicle class dimensions
+                    "ip_id": int(pkt[IP].id), # Extracted native IP identifier token field
+                    "size": len(pkt), 
                     "time": float(pkt.time),
                     "protocol": protocol_str, 
-                    "speed": random.uniform(4.0, 8.5) # Dynamic speed variations down the track
+                    "speed": random.uniform(8.5, 14.0) # Accelerated highway velocity metrics
                 })
 
         return {"filename": file.filename, "packets": packets_data}
 
     finally:
-        # Prevent server clutter by deleting the cache trace instantly
         os.unlink(tmp.name)
 
 if __name__ == "__main__":
     import uvicorn
-    # Capture the environment port variable automatically for the cloud instance
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
