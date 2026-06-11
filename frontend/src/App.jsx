@@ -1,113 +1,184 @@
-import React, { useState, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { Scene } from './Scene';
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { Html } from '@react-three/drei';
+import * as THREE from 'three';
 
-function App() {
-  const [packets, setPackets] = useState([]);
-  const [loading, setLoading] = useState(false);
+export function Scene({ packets }) {
+  const vehicleRefs = useRef([]);
+  const fiberRefs = useRef([]);
+  const lanePositions = [-6, -2, 2, 6]; 
 
-  const metrics = useMemo(() => {
-    if (packets.length === 0) return { dns: 0, https: 0, http: 0, totalBytes: 0 };
-    let dns = 0, https = 0, http = 0;
-    let totalBytes = 0;
-    
-    packets.forEach(p => {
-      totalBytes += p.size || 64;
-      if (p.protocol === 'DNS') dns++;
-      else if (p.protocol === 'HTTPS') https++;
-      else if (p.protocol === 'HTTP') http++;
+  const processedVehicles = useMemo(() => {
+    return packets.map((packet, index) => {
+      let laneIndex = 0;
+      let color = '#06b6d4'; 
+      let dimensions = [1.2, 0.8, 2.2]; 
+
+      if (packet.protocol === 'DNS') {
+        laneIndex = 0;
+        color = '#fbbf24'; 
+        dimensions = [0.8, 0.5, 1.4]; 
+      } else if (packet.protocol === 'HTTPS') {
+        laneIndex = 1;
+        color = '#10b981'; 
+        dimensions = [1.6, 1.2, 3.6]; 
+      } else if (packet.protocol === 'HTTP') {
+        laneIndex = 2;
+        color = '#f97316'; 
+        dimensions = [1.3, 0.9, 2.6]; 
+      } else {
+        laneIndex = 3;
+        color = '#a855f7'; 
+        dimensions = [1.1, 0.7, 2.0]; 
+      }
+
+      return {
+        id: packet.id || index,
+        src: packet.src || "UNKNOWN_SRC",
+        dst: packet.dst || "UNKNOWN_DST",
+        protocol: packet.protocol,
+        size: packet.size || 64,
+        x: lanePositions[laneIndex],
+        z: index * 5, 
+        color,
+        dimensions,
+        speed: packet.speed || 5
+      };
     });
-
-    return { dns, https, http, totalBytes: (totalBytes / 1024).toFixed(1) };
   }, [packets]);
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    setLoading(true);
-    
-    const formData = new FormData();
-    formData.append('file', file);
+  const dataFibers = useMemo(() => {
+    return Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      x: (i * 1.5) - 8.25,
+      zOffset: Math.random() * 50,
+      speed: Math.random() * 10 + 5
+    }));
+  }, []);
 
-    try {
-      const response = await fetch('https://pcapvision.onrender.com/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      setPackets(data.packets || []);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("System deployment mismatch. Ensure Render instance is fully awake.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useFrame((state, delta) => {
+    vehicleRefs.current.forEach((vehicle) => {
+      if (!vehicle) return;
+      vehicle.position.z -= delta * vehicle.userData.speed;
+      if (vehicle.position.z < -70) {
+        vehicle.position.z = 50; 
+      }
+    });
+
+    fiberRefs.current.forEach((fiber) => {
+      if (!fiber) return;
+      fiber.position.z -= delta * fiber.userData.speed;
+      if (fiber.position.z < -60) fiber.position.z = 40;
+    });
+  });
 
   return (
-    <div style={{ width: '100vw', height: '100vh', color: '#f8fafc', backgroundColor: '#010409', fontFamily: 'monospace', overflow: 'hidden', position: 'relative' }}>
-      
-      {/* TOP CONFIG BAR */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', boxSizing: 'border-box', borderBottom: '1px solid #1f2937', backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ padding: '6px 10px', backgroundColor: '#d946ef', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px', color: '#000' }}>PH</div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '15px', letterSpacing: '1px', color: '#d946ef' }}>PACKET HIGHWAY</h2>
-            <span style={{ fontSize: '10px', color: '#4b5563' }}>REAL-TIME 3D TELEMETRY PIPELINE</span>
-          </div>
-        </div>
-        <div>
-          <input type="file" accept=".pcap,.pcapng" onChange={handleFileUpload} id="pcap-upload" style={{ display: 'none' }} />
-          <label htmlFor="pcap-upload" style={{ padding: '8px 18px', backgroundColor: '#2563eb', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', letterSpacing: '0.5px' }}>
-            {loading ? "EXTRACTING CORE DATA..." : "⚡ LOAD PCAP MATRIX"}
-          </label>
-        </div>
-      </div>
+    <group>
+      <color attach="background" args={['#010409']} />
+      <ambientLight intensity={0.2} />
+      <pointLight position={[0, 20, 0]} intensity={1.5} distance={100} />
 
-      {/* ANALYTICS HUD HUD */}
-      <div style={{ position: 'absolute', top: 85, left: 20, width: '270px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', borderRadius: '8px', border: '1px solid #21262d', backgroundColor: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(12px)' }}>
-        <div>
-          <span style={{ fontSize: '10px', color: '#4b5563', fontWeight: 'bold' }}>LOGISTICS RUNTIME</span>
-          <div style={{ display: 'flex', gap: '24px', marginTop: '8px' }}>
-            <div>
-              <div style={{ fontSize: '9px', color: '#38bdf8' }}>TOTAL PAYLOAD</div>
-              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{metrics.totalBytes} <span style={{ fontSize: '11px', color: '#4b5563' }}>KB</span></div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: '#10b981' }}>CAPTURED STREAMS</div>
-              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>{packets.length}</div>
-            </div>
-          </div>
-        </div>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -10]}>
+        <planeGeometry args={[20, 160]} />
+        <meshStandardMaterial color="#0b0f19" roughness={0.9} metalness={0.4} />
+      </mesh>
 
-        <hr style={{ border: '0', borderTop: '1px solid #21262d', margin: 0 }} />
+      <mesh position={[-10.1, 0.1, -10]}>
+        <boxGeometry args={[0.15, 0.2, 160]} />
+        <meshBasicMaterial color="#ec4899" />
+      </mesh>
+      <mesh position={[10.1, 0.1, -10]}>
+        <boxGeometry args={[0.15, 0.2, 160]} />
+        <meshBasicMaterial color="#ec4899" />
+      </mesh>
 
-        <div>
-          <span style={{ fontSize: '10px', color: '#4b5563', fontWeight: 'bold' }}>TRAFFIC ROUTING CHANNELS</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', fontSize: '11px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981' }}>
-              <span>● HTTPS (HEAVY VEHICLES)</span> <span>{metrics.https}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24' }}>
-              <span>● DNS (LIGHT SPEEDERS)</span> <span>{metrics.dns}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f97316' }}>
-              <span>● HTTP (MIDWAY SEDANS)</span> <span>{metrics.http}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {dataFibers.map((fiber, idx) => (
+        <mesh 
+          key={fiber.id} 
+          ref={(el) => (fiberRefs.current[idx] = el)}
+          position={[fiber.x, 0.01, fiber.zOffset - 30]}
+          userData={{ speed: fiber.speed }}
+        >
+          <boxGeometry args={[0.04, 0.01, 15]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+        </mesh>
+      ))}
 
-      {/* GRAPHIC PIPELINE RENDER ENGINE */}
-      <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[0, 6, 16]} fov={55} />
-        <Scene packets={packets} />
-        <OrbitControls maxPolarAngle={Math.PI / 2.1} minDistance={4} maxDistance={35} />
-      </Canvas>
-      
-    </div>
+      <group position={[0, 0, -60]}>
+        <mesh position={[0, 5, 0]}>
+          <boxGeometry args={[22, 0.6, 1.5]} />
+          <meshStandardMaterial color="#0f172a" />
+        </mesh>
+        <mesh position={[0, 5.4, 0.2]}>
+          <boxGeometry args={[20, 0.15, 1.6]} />
+          <meshBasicMaterial color="#d946ef" />
+        </mesh>
+      </group>
+
+      {processedVehicles.map((v, idx) => (
+        <group 
+          key={v.id} 
+          ref={(el) => (vehicleRefs.current[idx] = el)} 
+          position={[v.x, v.dimensions[1] / 2 + 0.05, v.z]}
+          userData={{ speed: v.speed }}
+        >
+          <mesh castShadow>
+            <boxGeometry args={v.dimensions} />
+            <meshStandardMaterial 
+              color={v.color} 
+              transparent={true} 
+              opacity={0.25} 
+              roughness={0.1} 
+              metalness={0.9} 
+            />
+          </mesh>
+
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[v.dimensions[0] * 0.7, v.dimensions[1] * 0.7, v.dimensions[2] * 0.8]} />
+            <meshStandardMaterial 
+              color={v.color} 
+              wireframe={true} 
+              emissive={v.color}
+              emissiveIntensity={0.8}
+            />
+          </mesh>
+
+          <mesh position={[0, 0, -v.dimensions[2] / 2 - 0.02]}>
+            <boxGeometry args={[v.dimensions[0] * 0.8, 0.08, 0.04]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+
+          <Html 
+            distanceFactor={12} 
+            position={[v.dimensions[0] * 0.6, v.dimensions[1] + 0.3, 0]}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div style={{
+              backgroundColor: 'rgba(2, 6, 23, 0.85)',
+              border: `1px solid ${v.color}`,
+              padding: '6px 10px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: '#f8fafc',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              letterSpacing: '0.5px'
+            }}>
+              <div style={{ color: v.color, fontWeight: 'bold', fontSize: '10px', marginBottom: '2px' }}>
+                ⚡ {v.protocol} | {v.size}B
+              </div>
+              <div><span style={{ color: '#64748b' }}>SRC:</span> {v.src}</div>
+              <div><span style={{ color: '#64748b' }}>DST:</span> {v.dst}</div>
+            </div>
+          </Html>
+        </group>
+      ))}
+
+      <EffectComposer>
+        <Bloom intensity={2.0} luminanceThreshold={0.15} luminanceSmoothing={0.85} height={400} />
+      </EffectComposer>
+    </group>
   );
 }
-
-export default App;
