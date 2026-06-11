@@ -37,7 +37,6 @@ function App() {
     formData.append('file', file);
 
     try {
-      // FIXED URL: Removed the accidental '-api' string layout parameter
       const response = await fetch('https://pcapvision.onrender.com/api/upload', {
         method: 'POST',
         body: formData,
@@ -63,19 +62,15 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', color: '#f8fafc', backgroundColor: '#010409', fontFamily: 'monospace', overflow: 'hidden', position: 'relative' }}>
       
-      {/* TOP CONFIG HEADER */}
+      {/* PERFECTED PACKETVISION HEADER LAYER */}
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', boxSizing: 'border-box', borderBottom: '1px solid #1f2937', backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ padding: '6px 10px', backgroundColor: '#d946ef', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px', color: '#000' }}>PH</div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '15px', letterSpacing: '1px', color: '#d946ef' }}>PACKET HIGHWAY</h2>
-            <span style={{ fontSize: '10px', color: '#4b5563' }}>REAL-TIME 3D TELEMETRY PIPELINE</span>
-          </div>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '18px', letterSpacing: '1.5px', color: '#d946ef', fontWeight: 'bold' }}>PACKETVISION</h2>
         </div>
         <div>
           <input type="file" accept=".pcap,.pcapng" onChange={handleFileUpload} id="pcap-upload" style={{ display: 'none' }} />
           <label htmlFor="pcap-upload" style={{ padding: '8px 18px', backgroundColor: '#2563eb', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', letterSpacing: '0.5px' }}>
-            {loading ? "EXTRACTING CORE DATA..." : "⚡ LOAD PCAP MATRIX"}
+            {loading ? "EXTRACTING CORE DATA..." : "UPLOAD PCAP"}
           </label>
         </div>
       </div>
@@ -117,7 +112,7 @@ function App() {
         </div>
       </div>
 
-      {/* ADVANCED READOUT SLIDE-OUT PANEL WITH MAC LAYERS */}
+      {/* UPDATED READOUT BOX (REMOVED MAC, ADDED IP IDENTIFIER) */}
       {selectedVehicle && (
         <div style={{ position: 'absolute', top: 85, right: 20, width: '330px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '14px', padding: '20px', borderRadius: '8px', border: '1px solid #f43f5e', backgroundColor: 'rgba(13, 17, 23, 0.9)', backdropFilter: 'blur(12px)', boxShadow: '0 20px 40px rgba(244,63,94,0.1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -125,16 +120,17 @@ function App() {
             <button onClick={() => setSelectedVehicle(null)} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: '16px' }}>×</button>
           </div>
           <div>
-            <div style={{ fontSize: '9px', color: '#4b5563' }}>SOURCE MACHINE ADDRESS (MAC)</div>
-            <div style={{ fontSize: '13px', color: '#a855f7', fontWeight: 'bold' }}>{selectedVehicle.src_mac}</div>
-            <div style={{ fontSize: '9px', color: '#4b5563', marginTop: '4px' }}>SOURCE NETWORK IP</div>
+            <div style={{ fontSize: '9px', color: '#4b5563', marginBottom: '2px' }}>IP IDENTIFIER</div>
+            <div style={{ fontSize: '14px', color: '#a855f7', fontWeight: 'bold' }}>{selectedVehicle.ip_id}</div>
+          </div>
+          <hr style={{ border: '0', borderTop: '1px solid #21262d', margin: 0 }} />
+          <div>
+            <div style={{ fontSize: '9px', color: '#4b5563', marginBottom: '2px' }}>SOURCE NETWORK IP</div>
             <div style={{ fontSize: '13px', color: '#f8fafc', fontWeight: 'bold' }}>{selectedVehicle.src}</div>
           </div>
           <hr style={{ border: '0', borderTop: '1px solid #21262d', margin: 0 }} />
           <div>
-            <div style={{ fontSize: '9px', color: '#4b5563' }}>DESTINATION MACHINE ADDRESS (MAC)</div>
-            <div style={{ fontSize: '13px', color: '#a855f7', fontWeight: 'bold' }}>{selectedVehicle.dst_mac}</div>
-            <div style={{ fontSize: '9px', color: '#4b5563', marginTop: '4px' }}>DESTINATION TARGET IP</div>
+            <div style={{ fontSize: '9px', color: '#4b5563', marginBottom: '2px' }}>DESTINATION TARGET IP</div>
             <div style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold' }}>{selectedVehicle.dst}</div>
           </div>
           <hr style={{ border: '0', borderTop: '1px solid #21262d', margin: 0 }} />
@@ -168,7 +164,7 @@ function App() {
       {hoveredVehicle && (
         <div style={{ position: 'absolute', bottom: 90, left: '50%', transform: 'translateX(-50%)', zIndex: 10, padding: '8px 16px', backgroundColor: 'rgba(13, 17, 23, 0.95)', border: '1px solid #2563eb', borderRadius: '4px', pointerEvents: 'none', textAlign: 'center' }}>
           <div style={{ fontSize: '12px', color: '#38bdf8', fontWeight: 'bold' }}>{hoveredVehicle.src} ➡️ {hoveredVehicle.dst}</div>
-          <div style={{ fontSize: '9px', color: '#4b5563', marginTop: '2px' }}>CLICK INTERCEPT TO EXTRACT MAC NODE</div>
+          <div style={{ fontSize: '9px', color: '#4b5563', marginTop: '2px' }}>CLICK INTERCEPT TO EXTRACT METADATA NODE</div>
         </div>
       )}
 
