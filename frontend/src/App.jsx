@@ -18,8 +18,8 @@ function App() {
     formData.append('file', file);
 
     try {
-      // Send to our FastAPI backend
-      const response = await fetch('http://localhost:8000/api/upload', {
+      // Send to our live Render cloud backend
+      const response = await fetch('https://pcapvision.onrender.com/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -29,7 +29,7 @@ function App() {
       
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Failed to parse PCAP. Make sure your FastAPI backend is running!");
+      alert("Failed to parse PCAP. Make sure your Render backend is awake!");
     } finally {
       setLoading(false);
     }
