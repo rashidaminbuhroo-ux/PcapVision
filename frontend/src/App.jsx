@@ -37,7 +37,8 @@ function App() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('https://pcapvision-api.onrender.com/api/upload', {
+      // FIXED URL: Removed the accidental '-api' string layout parameter
+      const response = await fetch('https://pcapvision.onrender.com/api/upload', {
         method: 'POST',
         body: formData,
       });
