@@ -1,139 +1,139 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-export function Scene({ packets, onHoverVehicle, onSelectVehicle, selectedVehicleId }) {
+export function Scene({ packets }) {
   const vehicleRefs = useRef([]);
+  const fiberRefs = useRef([]);
   const lanePositions = [-6, -2, 2, 6]; 
 
+  // Process the raw PCAP telemetry packet array
   const processedVehicles = useMemo(() => {
     return packets.map((packet, index) => {
       let laneIndex = 0;
       let color = '#06b6d4'; 
-      let dimensions = [0.8, 0.6, 1.6]; 
+      let dimensions = [1.2, 0.8, 2.2]; 
 
       if (packet.protocol === 'DNS') {
         laneIndex = 0;
         color = '#fbbf24'; 
-        dimensions = [0.4, 0.4, 0.9]; 
+        dimensions = [0.8, 0.5, 1.4]; 
       } else if (packet.protocol === 'HTTPS') {
         laneIndex = 1;
         color = '#10b981'; 
-        dimensions = [1.2, 1.1, 3.2]; 
+        dimensions = [1.6, 1.2, 3.6]; 
       } else if (packet.protocol === 'HTTP') {
         laneIndex = 2;
         color = '#f97316'; 
-        dimensions = [0.9, 0.7, 2.0]; 
+        dimensions = [1.3, 0.9, 2.6]; 
       } else {
         laneIndex = 3;
-        color = '#8b5cf6'; 
-        dimensions = [0.8, 0.6, 1.6]; 
+        color = '#a855f7'; 
+        dimensions = [1.1, 0.7, 2.0]; 
       }
 
       return {
         id: packet.id || index,
-        src: packet.src || "0.0.0.0",
-        dst: packet.dst || "0.0.0.0",
+        src: packet.src || "UNKNOWN_SRC",
+        dst: packet.dst || "UNKNOWN_DST",
         protocol: packet.protocol,
-        size: packet.size,
+        size: packet.size || 64,
         x: lanePositions[laneIndex],
-        z: index * 4, 
+        z: index * 5, // Clean defensive spacing
         color,
         dimensions,
-        speed: Math.max(3, (packet.size / 200) + 2) 
+        speed: packet.speed || 5
       };
     });
   }, [packets]);
 
+  // Generate glowing highway data fibers beneath the traffic
+  const dataFibers = useMemo(() => {
+    return Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      x: (i * 1.5) - 8.25,
+      zOffset: Math.random() * 50,
+      speed: floatOffset(5, 15)
+    }));
+  }, []);
+
+  function floatOffset(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
   useFrame((state, delta) => {
+    // Animate Vehicles down the pipeline
     vehicleRefs.current.forEach((vehicle) => {
       if (!vehicle) return;
       vehicle.position.z -= delta * vehicle.userData.speed;
-      if (vehicle.position.z < -60) {
-        vehicle.position.z = 40;
+      if (vehicle.position.z < -70) {
+        vehicle.position.z = 50; 
       }
+    });
+
+    // Animate underlying fiber optic stream matrix
+    fiberRefs.current.forEach((fiber) => {
+      if (!fiber) return;
+      fiber.position.z -= delta * fiber.userData.speed;
+      if (fiber.position.z < -60) fiber.position.z = 40;
     });
   });
 
   return (
     <group>
-      <color attach="background" args={['#020617']} />
-      <ambientLight intensity={0.15} />
-      <directionalLight position={[5, 25, 5]} intensity={0.4} />
+      <color attach="background" args={['#010409']} />
+      <ambientLight intensity={0.2} />
+      <pointLight position={[0, 20, 0]} intensity={1.5} distance={100} />
 
-      {/* ROAD SURFACE */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, -10]}>
-        <planeGeometry args={[18, 150]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.7} metalness={0.2} />
+      {/* TACTICAL ROADWAY GROUND */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -10]}>
+        <planeGeometry args={[20, 160]} />
+        <meshStandardMaterial color="#0b0f19" roughness={0.9} metalness={0.4} />
       </mesh>
 
-      {/* NEON SIDEWALKS */}
-      <mesh position={[-9.1, 0.05, -10]}>
-        <boxGeometry args={[0.1, 0.1, 150]} />
-        <meshBasicMaterial color="#ec4899" /> 
+      {/* CYBERPUNK NEON SIDE BARRIERS */}
+      <mesh position={[-10.1, 0.1, -10]}>
+        <boxGeometry args={[0.15, 0.2, 160]} />
+        <meshBasicMaterial color="#ec4899" />
       </mesh>
-      <mesh position={[9.1, 0.05, -10]}>
-        <boxGeometry args={[0.1, 0.1, 150]} />
+      <mesh position={[10.1, 0.1, -10]}>
+        <boxGeometry args={[0.15, 0.2, 160]} />
         <meshBasicMaterial color="#ec4899" />
       </mesh>
 
-      {/* INTERNET GATEWAY ARC */}
-      <mesh position={[0, 4, -50]}>
-        <boxGeometry args={[20, 0.5, 1]} />
-        <meshStandardMaterial color="#1e1b4b" />
-      </mesh>
-      <mesh position={[0, 4.3, -50]}>
-        <boxGeometry args={[18, 0.1, 1.1]} />
-        <meshBasicMaterial color="#a855f7" /> 
-      </mesh>
+      {/* STREAMING DATA FIBERS LINES */}
+      {dataFibers.map((fiber, idx) => (
+        <mesh 
+          key={fiber.id} 
+          ref={(el) => (fiberRefs.current[idx] = el)}
+          position={[fiber.x, 0.01, fiber.zOffset - 30]}
+          userData={{ speed: fiber.speed }}
+        >
+          <boxGeometry args={[0.04, 0.01, 15]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+        </mesh>
+      ))}
 
-      {/* GENERATE STYLIZED VEHICLES */}
-      {processedVehicles.map((v, idx) => {
-        const isSelected = selectedVehicleId === v.id;
-        return (
-          <group 
-            key={v.id} 
-            ref={(el) => (vehicleRefs.current[idx] = el)} 
-            position={[v.x, v.dimensions[1]/2, v.z]}
-            userData={{ speed: v.speed }}
-          >
-            <mesh 
-              castShadow 
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                document.body.style.cursor = 'pointer';
-                onHoverVehicle(v);
-              }}
-              onPointerOut={(e) => {
-                document.body.style.cursor = 'default';
-                onHoverVehicle(null);
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVehicle(v);
-              }}
-            >
-              <boxGeometry args={v.dimensions} />
-              <meshStandardMaterial 
-                color={isSelected ? '#f43f5e' : v.color} 
-                roughness={0.3} 
-                metalness={0.8}
-                emissive={isSelected ? '#f43f5e' : '#000000'}
-                emissiveIntensity={isSelected ? 0.5 : 0}
-              />
-            </mesh>
-            <mesh position={[0, 0.1, -v.dimensions[2]/2 - 0.02]}>
-              <boxGeometry args={[v.dimensions[0] * 0.7, 0.1, 0.05]} />
-              <meshBasicMaterial color="#ffffff" />
-            </mesh>
-          </group>
-        );
-      })}
+      {/* HIGHWAY INTERNET GATEWAY HUB */}
+      <group position={[0, 0, -60]}>
+        <mesh position={[0, 5, 0]}>
+          <boxGeometry args={[22, 0.6, 1.5]} />
+          <meshStandardMaterial color="#0f172a" dark={true} />
+        </mesh>
+        <mesh position={[0, 5.4, 0.2]}>
+          <boxGeometry args={[20, 0.15, 1.6]} />
+          <meshBasicMaterial color="#d946ef" />
+        </mesh>
+      </group>
 
-      <EffectComposer>
-        <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} />
-      </EffectComposer>
-    </group>
-  );
-}
+      {/* ADVANCED CIRCUIT ENCAPSULATED VEHICLES */}
+      {processedVehicles.map((v, idx) => (
+        <group 
+          key={v.id} 
+          ref={(el) => (vehicleRefs.current[idx] = el)} 
+          position={[v.x, v.dimensions[1] / 2 + 0.05, v.z]}
+          userData={{ speed: v.speed }}
+        >
+          {/* Outer Protective Transparent
