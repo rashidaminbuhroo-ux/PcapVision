@@ -9,29 +9,33 @@ export function Scene({ packets }) {
   const fiberRefs = useRef([]);
   const lanePositions = [-6, -2, 2, 6]; 
 
-  // Process the raw PCAP telemetry packet array
   const processedVehicles = useMemo(() => {
     return packets.map((packet, index) => {
       let laneIndex = 0;
       let color = '#06b6d4'; 
       let dimensions = [1.2, 0.8, 2.2]; 
+      let direction = "OUTBOUND";
 
       if (packet.protocol === 'DNS') {
         laneIndex = 0;
         color = '#fbbf24'; 
-        dimensions = [0.8, 0.5, 1.4]; 
+        dimensions = [0.8, 0.5, 1.4];
+        direction = "OUTBOUND";
       } else if (packet.protocol === 'HTTPS') {
         laneIndex = 1;
         color = '#10b981'; 
-        dimensions = [1.6, 1.2, 3.6]; 
+        dimensions = [1.6, 1.2, 3.6];
+        direction = "OUTBOUND";
       } else if (packet.protocol === 'HTTP') {
         laneIndex = 2;
         color = '#f97316'; 
-        dimensions = [1.3, 0.9, 2.6]; 
+        dimensions = [1.3, 0.9, 2.6];
+        direction = "INBOUND";
       } else {
         laneIndex = 3;
         color = '#a855f7'; 
-        dimensions = [1.1, 0.7, 2.0]; 
+        dimensions = [1.1, 0.7, 2.0];
+        direction = "INBOUND";
       }
 
       return {
@@ -41,39 +45,37 @@ export function Scene({ packets }) {
         protocol: packet.protocol,
         size: packet.size || 64,
         x: lanePositions[laneIndex],
-        z: index * 5, // Clean defensive spacing
+        z: index * 5, 
         color,
         dimensions,
+        direction,
         speed: packet.speed || 5
       };
     });
   }, [packets]);
 
-  // Generate glowing highway data fibers beneath the traffic
   const dataFibers = useMemo(() => {
     return Array.from({ length: 12 }).map((_, i) => ({
       id: i,
       x: (i * 1.5) - 8.25,
       zOffset: Math.random() * 50,
-      speed: floatOffset(5, 15)
+      speed: Math.random() * 10 + 5
     }));
   }, []);
 
-  function floatOffset(min, max) {
-    return Math.random() * (max - min) + min;
-  }
-
   useFrame((state, delta) => {
-    // Animate Vehicles down the pipeline
     vehicleRefs.current.forEach((vehicle) => {
       if (!vehicle) return;
-      vehicle.position.z -= delta * vehicle.userData.speed;
-      if (vehicle.position.z < -70) {
-        vehicle.position.z = 50; 
+      
+      if (vehicle.userData.direction === "OUTBOUND") {
+        vehicle.position.z -= delta * vehicle.userData.speed;
+        if (vehicle.position.z < -70) vehicle.position.z = 50; 
+      } else {
+        vehicle.position.z += delta * vehicle.userData.speed;
+        if (vehicle.position.z > 50) vehicle.position.z = -70; 
       }
     });
 
-    // Animate underlying fiber optic stream matrix
     fiberRefs.current.forEach((fiber) => {
       if (!fiber) return;
       fiber.position.z -= delta * fiber.userData.speed;
@@ -87,13 +89,11 @@ export function Scene({ packets }) {
       <ambientLight intensity={0.2} />
       <pointLight position={[0, 20, 0]} intensity={1.5} distance={100} />
 
-      {/* TACTICAL ROADWAY GROUND */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -10]}>
         <planeGeometry args={[20, 160]} />
         <meshStandardMaterial color="#0b0f19" roughness={0.9} metalness={0.4} />
       </mesh>
 
-      {/* CYBERPUNK NEON SIDE BARRIERS */}
       <mesh position={[-10.1, 0.1, -10]}>
         <boxGeometry args={[0.15, 0.2, 160]} />
         <meshBasicMaterial color="#ec4899" />
@@ -103,7 +103,15 @@ export function Scene({ packets }) {
         <meshBasicMaterial color="#ec4899" />
       </mesh>
 
-      {/* STREAMING DATA FIBERS LINES */}
+      <mesh position={[-0.08, 0.01, -10]}>
+        <boxGeometry args={[0.06, 0.01, 160]} />
+        <meshBasicMaterial color="#eab308" />
+      </mesh>
+      <mesh position={[0.08, 0.01, -10]}>
+        <boxGeometry args={[0.06, 0.01, 160]} />
+        <meshBasicMaterial color="#eab308" />
+      </mesh>
+
       {dataFibers.map((fiber, idx) => (
         <mesh 
           key={fiber.id} 
@@ -116,11 +124,10 @@ export function Scene({ packets }) {
         </mesh>
       ))}
 
-      {/* HIGHWAY INTERNET GATEWAY HUB */}
       <group position={[0, 0, -60]}>
         <mesh position={[0, 5, 0]}>
           <boxGeometry args={[22, 0.6, 1.5]} />
-          <meshStandardMaterial color="#0f172a" dark={true} />
+          <meshStandardMaterial color="#0f172a" />
         </mesh>
         <mesh position={[0, 5.4, 0.2]}>
           <boxGeometry args={[20, 0.15, 1.6]} />
@@ -128,12 +135,70 @@ export function Scene({ packets }) {
         </mesh>
       </group>
 
-      {/* ADVANCED CIRCUIT ENCAPSULATED VEHICLES */}
       {processedVehicles.map((v, idx) => (
         <group 
           key={v.id} 
           ref={(el) => (vehicleRefs.current[idx] = el)} 
           position={[v.x, v.dimensions[1] / 2 + 0.05, v.z]}
-          userData={{ speed: v.speed }}
+          rotation={[0, v.direction === "INBOUND" ? Math.PI : 0, 0]}
+          userData={{ speed: v.speed, direction: v.direction }}
         >
-          {/* Outer Protective Transparent
+          <mesh castShadow>
+            <boxGeometry args={v.dimensions} />
+            <meshStandardMaterial 
+              color={v.color} 
+              transparent={true} 
+              opacity={0.25} 
+              roughness={0.1} 
+              metalness={0.9} 
+            />
+          </mesh>
+
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[v.dimensions[0] * 0.7, v.dimensions[1] * 0.7, v.dimensions[2] * 0.8]} />
+            <meshStandardMaterial 
+              color={v.color} 
+              wireframe={true} 
+              emissive={v.color}
+              emissiveIntensity={0.8}
+            />
+          </mesh>
+
+          <mesh position={[0, 0, -v.dimensions[2] / 2 - 0.02]}>
+            <boxGeometry args={[v.dimensions[0] * 0.8, 0.08, 0.04]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+
+          <Html 
+            distanceFactor={12} 
+            position={[v.dimensions[0] * 0.6, v.dimensions[1] + 0.3, 0]}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div style={{
+              backgroundColor: 'rgba(2, 6, 23, 0.85)',
+              border: `1px solid ${v.color}`,
+              padding: '6px 10px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: '#f8fafc',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              letterSpacing: '0.5px'
+            }}>
+              <div style={{ color: v.color, fontWeight: 'bold', fontSize: '10px', marginBottom: '2px' }}>
+                ⚡ {v.protocol} | {v.size}B
+              </div>
+              <div><span style={{ color: '#64748b' }}>SRC:</span> {v.src}</div>
+              <div><span style={{ color: '#64748b' }}>DST:</span> {v.dst}</div>
+            </div>
+          </Html>
+        </group>
+      ))}
+
+      <EffectComposer>
+        <Bloom intensity={2.0} luminanceThreshold={0.15} luminanceSmoothing={0.85} height={400} />
+      </EffectComposer>
+    </group>
+  );
+}
