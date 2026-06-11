@@ -3,4 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/PcapVision/', // Make sure this matches your exact GitHub repo name!
 })
