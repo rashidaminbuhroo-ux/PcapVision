@@ -6,8 +6,6 @@ import { Scene } from './Scene';
 function App() {
   const [packets, setPackets] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [hoveredVehicle, setHoveredVehicle] = useState(null);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   const metrics = useMemo(() => {
     if (packets.length === 0) return { dns: 0, https: 0, http: 0, totalBytes: 0 };
@@ -28,7 +26,6 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
     setLoading(true);
-    setSelectedVehicle(null);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -42,111 +39,71 @@ function App() {
       setPackets(data.packets || []);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("System deployment error. Ensure Render server instance is awake.");
+      alert("System deployment mismatch. Ensure Render instance is fully awake.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', color: '#f8fafc', backgroundColor: '#020617', fontFamily: 'monospace', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', color: '#f8fafc', backgroundColor: '#010409', fontFamily: 'monospace', overflow: 'hidden', position: 'relative' }}>
       
-      {/* TOP HEADER */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', boxSizing: 'border-box', borderBottom: '1px solid #1e293b', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }}>
+      {/* TOP CONFIG BAR */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', boxSizing: 'border-box', borderBottom: '1px solid #1f2937', backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ padding: '6px 10px', backgroundColor: '#ec4899', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px' }}>PH</div>
+          <div style={{ padding: '6px 10px', backgroundColor: '#d946ef', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px', color: '#000' }}>PH</div>
           <div>
-            <h2 style={{ margin: 0, fontSize: '16px', letterSpacing: '1px', color: '#ec4899' }}>PACKET HIGHWAY</h2>
-            <span style={{ fontSize: '10px', color: '#64748b' }}>3D NETWORK INTERCEPT PIPELINE</span>
+            <h2 style={{ margin: 0, fontSize: '15px', letterSpacing: '1px', color: '#d946ef' }}>PACKET HIGHWAY</h2>
+            <span style={{ fontSize: '10px', color: '#4b5563' }}>REAL-TIME 3D TELEMETRY PIPELINE</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div>
           <input type="file" accept=".pcap,.pcapng" onChange={handleFileUpload} id="pcap-upload" style={{ display: 'none' }} />
-          <label htmlFor="pcap-upload" style={{ padding: '8px 16px', backgroundColor: '#3b82f6', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', transition: '0.2s' }}>
-            {loading ? "PARSING PACKETS..." : "⚡ OPEN PCAP CORE"}
+          <label htmlFor="pcap-upload" style={{ padding: '8px 18px', backgroundColor: '#2563eb', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', letterSpacing: '0.5px' }}>
+            {loading ? "EXTRACTING CORE DATA..." : "⚡ LOAD PCAP MATRIX"}
           </label>
         </div>
       </div>
 
-      {/* LEFT-SIDE HUD */}
-      <div style={{ position: 'absolute', top: 80, left: 20, width: '280px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', borderRadius: '12px', border: '1px solid #1e293b', backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(12px)', boxShadow: '0 20px 40px rgba(0,0,0,0.7)' }}>
+      {/* ANALYTICS HUD HUD */}
+      <div style={{ position: 'absolute', top: 85, left: 20, width: '270px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', borderRadius: '8px', border: '1px solid #21262d', backgroundColor: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(12px)' }}>
         <div>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>BANDWIDTH LOGISTICS</span>
-          <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
+          <span style={{ fontSize: '10px', color: '#4b5563', fontWeight: 'bold' }}>LOGISTICS RUNTIME</span>
+          <div style={{ display: 'flex', gap: '24px', marginTop: '8px' }}>
             <div>
-              <div style={{ fontSize: '10px', color: '#38bdf8' }}>▼ PAYLOAD MAP</div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#f8fafc' }}>{metrics.totalBytes} <span style={{ fontSize: '12px' }}>KB</span></div>
+              <div style={{ fontSize: '9px', color: '#38bdf8' }}>TOTAL PAYLOAD</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{metrics.totalBytes} <span style={{ fontSize: '11px', color: '#4b5563' }}>KB</span></div>
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#4ade80' }}>▲ STREAM COUNT</div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#4ade80' }}>{packets.length}</div>
+              <div style={{ fontSize: '9px', color: '#10b981' }}>CAPTURED STREAMS</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>{packets.length}</div>
             </div>
           </div>
         </div>
 
-        <hr style={{ border: '0', borderTop: '1px solid #1e293b', margin: 0 }} />
+        <hr style={{ border: '0', borderTop: '1px solid #21262d', margin: 0 }} />
 
         <div>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>PROTOCOL DISTRIBUTION</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', fontSize: '12px' }}>
+          <span style={{ fontSize: '10px', color: '#4b5563', fontWeight: 'bold' }}>TRAFFIC ROUTING CHANNELS</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', fontSize: '11px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981' }}>
-              <span>● HTTPS (HEAVY CARGO)</span> <span>{metrics.https}</span>
+              <span>● HTTPS (HEAVY VEHICLES)</span> <span>{metrics.https}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24' }}>
-              <span>● DNS (MOTORCYCLES)</span> <span>{metrics.dns}</span>
+              <span>● DNS (LIGHT SPEEDERS)</span> <span>{metrics.dns}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f97316' }}>
-              <span>● HTTP (SEDANS)</span> <span>{metrics.http}</span>
+              <span>● HTTP (MIDWAY SEDANS)</span> <span>{metrics.http}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT-SIDE PACKET DIAGNOSTIC DISPLAY */}
-      {selectedVehicle && (
-        <div style={{ position: 'absolute', top: 80, right: 20, width: '320px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '14px', padding: '20px', borderRadius: '12px', border: '1px solid #f43f5e', backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(12px)', boxShadow: '0 20px 40px rgba(244,63,94,0.15)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#f43f5e', fontWeight: 'bold' }}>📡 PACKET TELEMETRY ANALYSIS</span>
-            <button onClick={() => setSelectedVehicle(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '16px' }}>×</button>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>SOURCE ADDRESS</div>
-            <div style={{ fontSize: '14px', color: '#f8fafc', fontWeight: 'bold' }}>{selectedVehicle.src}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>DESTINATION TARGET</div>
-            <div style={{ fontSize: '14px', color: '#38bdf8', fontWeight: 'bold' }}>{selectedVehicle.dst}</div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-            <div>
-              <div style={{ fontSize: '10px', color: '#64748b' }}>PROTOCOL</div>
-              <div style={{ fontSize: '13px', color: selectedVehicle.color, fontWeight: 'bold' }}>{selectedVehicle.protocol}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#64748b' }}>PAYLOAD SIZE</div>
-              <div style={{ fontSize: '13px', color: '#4ade80', fontWeight: 'bold' }}>{selectedVehicle.size} Bytes</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FLOATING HOVER TOOLTIP INTERFACE */}
-      {hoveredVehicle && (
-        <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', zIndex: 10, padding: '8px 16px', backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #3b82f6', borderRadius: '6px', pointerEvents: 'none', textAlign: 'center', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#38bdf8' }}>{hoveredVehicle.src} ➡️ {hoveredVehicle.dst}</div>
-          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>CLICK VEHICLE FOR SYSTEM PROFILE</div>
-        </div>
-      )}
-
+      {/* GRAPHIC PIPELINE RENDER ENGINE */}
       <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[0, 4, 18]} fov={60} />
-        <Scene 
-          packets={packets} 
-          onHoverVehicle={setHoveredVehicle} 
-          onSelectVehicle={setSelectedVehicle}
-          selectedVehicleId={selectedVehicle ? selectedVehicle.id : null}
-        />
-        <OrbitControls maxPolarAngle={Math.PI / 2.1} minDistance={5} maxDistance={40} />
+        <PerspectiveCamera makeDefault position={[0, 6, 16]} fov={55} />
+        <Scene packets={packets} />
+        <OrbitControls maxPolarAngle={Math.PI / 2.1} minDistance={4} maxDistance={35} />
       </Canvas>
       
     </div>
