@@ -4,12 +4,13 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-export function Scene({ packets }) {
+export function Scene({ packets, isPaused, playbackResetCounter, onHoverVehicle, onSelectVehicle, selectedVehicleId }) {
   const vehicleRefs = useRef([]);
   const fiberRefs = useRef([]);
   const lanePositions = [-6, -2, 2, 6]; 
 
   const processedVehicles = useMemo(() => {
+    vehicleRefs.current = [];
     return packets.map((packet, index) => {
       let laneIndex = 0;
       let color = '#06b6d4'; 
@@ -42,17 +43,19 @@ export function Scene({ packets }) {
         id: packet.id || index,
         src: packet.src || "UNKNOWN_SRC",
         dst: packet.dst || "UNKNOWN_DST",
+        src_mac: packet.src_mac || "00:00:00:00:00:00",
+        dst_mac: packet.dst_mac || "00:00:00:00:00:00",
         protocol: packet.protocol,
         size: packet.size || 64,
         x: lanePositions[laneIndex],
-        z: index * 5, 
+        z: direction === "OUTBOUND" ? (index * 18) + 25 : -(index * 18) - 45, 
         color,
         dimensions,
         direction,
-        speed: packet.speed || 5
+        speed: packet.speed || 6
       };
     });
-  }, [packets]);
+  }, [packets, playbackResetCounter]);
 
   const dataFibers = useMemo(() => {
     return Array.from({ length: 12 }).map((_, i) => ({
@@ -64,15 +67,23 @@ export function Scene({ packets }) {
   }, []);
 
   useFrame((state, delta) => {
+    if (isPaused) return;
+
     vehicleRefs.current.forEach((vehicle) => {
-      if (!vehicle) return;
+      if (!vehicle || vehicle.userData.hasFinished) return;
       
       if (vehicle.userData.direction === "OUTBOUND") {
         vehicle.position.z -= delta * vehicle.userData.speed;
-        if (vehicle.position.z < -70) vehicle.position.z = 50; 
+        if (vehicle.position.z < -85) {
+          vehicle.userData.hasFinished = true;
+          vehicle.visible = false;
+        }
       } else {
         vehicle.position.z += delta * vehicle.userData.speed;
-        if (vehicle.position.z > 50) vehicle.position.z = -70; 
+        if (vehicle.position.z > 55) {
+          vehicle.userData.hasFinished = true;
+          vehicle.visible = false;
+        }
       }
     });
 
@@ -135,66 +146,74 @@ export function Scene({ packets }) {
         </mesh>
       </group>
 
-      {processedVehicles.map((v, idx) => (
-        <group 
-          key={v.id} 
-          ref={(el) => (vehicleRefs.current[idx] = el)} 
-          position={[v.x, v.dimensions[1] / 2 + 0.05, v.z]}
-          rotation={[0, v.direction === "INBOUND" ? Math.PI : 0, 0]}
-          userData={{ speed: v.speed, direction: v.direction }}
-        >
-          <mesh castShadow>
-            <boxGeometry args={v.dimensions} />
-            <meshStandardMaterial 
-              color={v.color} 
-              transparent={true} 
-              opacity={0.25} 
-              roughness={0.1} 
-              metalness={0.9} 
-            />
-          </mesh>
-
-          <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[v.dimensions[0] * 0.7, v.dimensions[1] * 0.7, v.dimensions[2] * 0.8]} />
-            <meshStandardMaterial 
-              color={v.color} 
-              wireframe={true} 
-              emissive={v.color}
-              emissiveIntensity={0.8}
-            />
-          </mesh>
-
-          <mesh position={[0, 0, -v.dimensions[2] / 2 - 0.02]}>
-            <boxGeometry args={[v.dimensions[0] * 0.8, 0.08, 0.04]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-
-          <Html 
-            distanceFactor={12} 
-            position={[v.dimensions[0] * 0.6, v.dimensions[1] + 0.3, 0]}
-            style={{ pointerEvents: 'none' }}
+      {processedVehicles.map((v, idx) => {
+        const isSelected = selectedVehicleId === v.id;
+        return (
+          <group 
+            key={v.id} 
+            ref={(el) => (vehicleRefs.current[idx] = el)} 
+            position={[v.x, v.dimensions[1] / 2 + 0.05, v.z]}
+            rotation={[0, v.direction === "INBOUND" ? Math.PI : 0, 0]}
+            userData={{ speed: v.speed, direction: v.direction, hasFinished: false }}
           >
-            <div style={{
-              backgroundColor: 'rgba(2, 6, 23, 0.85)',
-              border: `1px solid ${v.color}`,
-              padding: '6px 10px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              fontSize: '11px',
-              color: '#f8fafc',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-              letterSpacing: '0.5px'
-            }}>
-              <div style={{ color: v.color, fontWeight: 'bold', fontSize: '10px', marginBottom: '2px' }}>
-                ⚡ {v.protocol} | {v.size}B
+            <mesh 
+              castShadow
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                onHoverVehicle(v);
+              }}
+              onPointerOut={(e) => {
+                onHoverVehicle(null);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVehicle(v);
+              }}
+            >
+              <boxGeometry args={v.dimensions} />
+              <meshStandardMaterial 
+                color={isSelected ? '#f43f5e' : v.color} 
+                transparent={true} 
+                opacity={0.3} 
+                roughness={0.1} 
+                metalness={0.9} 
+                emissive={isSelected ? '#f43f5e' : '#000000'}
+                emissiveIntensity={isSelected ? 0.6 : 0}
+              />
+            </mesh>
+
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[v.dimensions[0] * 0.7, v.dimensions[1] * 0.7, v.dimensions[2] * 0.8]} />
+              <meshStandardMaterial 
+                color={v.color} 
+                wireframe={true} 
+                emissive={v.color}
+                emissiveIntensity={0.8}
+              />
+            </mesh>
+
+            <mesh position={[0, 0, -v.dimensions[2] / 2 - 0.02]}>
+              <boxGeometry args={[v.dimensions[0] * 0.8, 0.08, 0.04]} />
+              <meshBasicMaterial color="#ffffff" />
+            </mesh>
+
+            <Html distanceFactor={14} position={[0, v.dimensions[1] + 0.2, 0]}>
+              <div style={{
+                backgroundColor: 'rgba(13, 17, 23, 0.9)',
+                border: isSelected ? '1px solid #f43f5e' : `1px solid ${v.color}`,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                color: '#fff',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+              }}>
+                {v.protocol}
               </div>
-              <div><span style={{ color: '#64748b' }}>SRC:</span> {v.src}</div>
-              <div><span style={{ color: '#64748b' }}>DST:</span> {v.dst}</div>
-            </div>
-          </Html>
-        </group>
-      ))}
+            </Html>
+          </group>
+        );
+      })}
 
       <EffectComposer>
         <Bloom intensity={2.0} luminanceThreshold={0.15} luminanceSmoothing={0.85} height={400} />
